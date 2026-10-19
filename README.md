@@ -27,13 +27,20 @@ Install the package, save your OpenAI API key, and start the interactive
 session:
 
 ```console
-pipx install codepilot
+pipx install codepilot-00
 codepilot setup
 codepilot chat
 ```
 
-If you prefer not to use `pipx`, you can install with `python -m pip install
-codepilot` in an environment whose scripts directory is on your `PATH`.
+The PyPI distribution is named `codepilot-00`; the installed terminal command
+is `codepilot`.
+
+If you prefer not to use `pipx`, install the distribution in a virtual
+environment and ensure its scripts directory is on your `PATH`:
+
+```console
+python -m pip install codepilot-00
+```
 
 Generate code directly without the interactive session:
 
@@ -41,5 +48,5 @@ Generate code directly without the interactive session:
 uv run codepilot generate "Write a function that checks whether text is a palindrome"
 ```
 
-See [SETUP.md](SETUP.md) for user installation and package publishing
-instructions.
+See the [installation and publishing guide](https://github.com/kevit-prit-kanani/Agents/blob/master/SETUP.md)
+for detailed instructions.

@@ -7,16 +7,21 @@
 
 ## Install as a user
 
-After CodePilot has been published to PyPI, install it with pip:
+After CodePilot has been published to PyPI, install the `codepilot-00`
+distribution with pipx:
 
 ```console
-pipx install codepilot
+pipx install codepilot-00
 ```
 
 `pipx` installs command-line applications in an isolated environment and
-exposes the `codepilot` command. Alternatively, use `python -m pip install
-codepilot` in a virtual environment and ensure its scripts directory is on
-`PATH`.
+exposes the `codepilot` command. The PyPI distribution name and the installed
+command name are intentionally different. Alternatively, install in a virtual
+environment and ensure its scripts directory is on `PATH`:
+
+```console
+python -m pip install codepilot-00
+```
 
 Then configure the key and launch the CLI:
 
@@ -73,13 +78,15 @@ The distributions are written to `dist/`. Check that both files contain the
 package metadata and expected source before uploading:
 
 ```console
-uv run --with twine twine check dist/*
+uv run --with twine twine check dist/codepilot_00-*
 ```
 
-The distribution name is set by `project.name` in `pyproject.toml`. PyPI names
-must be unique; if `codepilot` is unavailable, choose an available name and
-update `project.name` before publishing. The installed command name is
-controlled separately by `[project.scripts]`.
+The distribution name is set by `project.name` in `pyproject.toml` and must be
+unique on PyPI. The name `codepilot` is already owned by another PyPI project,
+so this project uses `codepilot-00`; the executable name is controlled
+separately by `[project.scripts]`. The `codepilot-00` project endpoint returned
+not-found during the preflight check on 2026-10-19; recheck availability when
+you are ready to publish, since name availability can change.
 
 ## Publish to TestPyPI first
 
@@ -89,7 +96,7 @@ controlled separately by `[project.scripts]`.
 
    ```console
    export UV_PUBLISH_TOKEN='pypi-your-test-token'
-   uv publish --publish-url https://test.pypi.org/legacy/
+   uv publish --publish-url https://test.pypi.org/legacy/ dist/codepilot_00-*
    ```
 
 4. In a clean virtual environment, install from TestPyPI and exercise the
@@ -98,7 +105,7 @@ controlled separately by `[project.scripts]`.
    ```console
    python -m venv /tmp/codepilot-test
    /tmp/codepilot-test/bin/python -m pip install \
-     --index-url https://test.pypi.org/simple/ codepilot
+     --index-url https://test.pypi.org/simple/ codepilot-00
    /tmp/codepilot-test/bin/codepilot --help
    ```
 
@@ -108,7 +115,7 @@ missing dependency, use PyPI as the extra package index:
 ```console
 /tmp/codepilot-test/bin/python -m pip install \
   --index-url https://test.pypi.org/simple/ \
-  --extra-index-url https://pypi.org/simple/ codepilot
+  --extra-index-url https://pypi.org/simple/ codepilot-00
 ```
 
 ## Publish to PyPI
@@ -119,13 +126,13 @@ missing dependency, use PyPI as the extra package index:
 
    ```console
    export UV_PUBLISH_TOKEN='pypi-your-production-token'
-   uv publish
+   uv publish dist/codepilot_00-*
    ```
 
 3. Install from PyPI in a clean environment and verify the public CLI:
 
    ```console
-   python -m pip install codepilot
+   python -m pip install codepilot-00
    codepilot --help
    codepilot setup
    ```
