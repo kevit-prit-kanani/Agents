@@ -3,6 +3,7 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.syntax import Syntax
 
@@ -74,35 +75,64 @@ def chat(
         help="Maximum implementation attempts.",
     ),
 ) -> None:
-    """Start an interactive generate-test-repair session."""
+    """Start an interactive conversational coding session."""
     console.print(
         Panel(
-            "Describe a Python task. CodePilot generates the code and tests it.\n"
+            "Ask questions or give me a coding task.\n"
+            "Coding tasks are generated, tested, and repaired automatically.\n"
             "Type 'exit' or 'quit' to stop.",
             title="[bold cyan]CodePilot[/bold cyan]",
         )
     )
 
+    agent = None
+
     while True:
         try:
-            task = console.input("\n[bold cyan]codepilot > [/bold cyan]").strip()
+            message = console.input("\n[bold cyan]you > [/bold cyan]").strip()
         except EOFError, KeyboardInterrupt:
             console.print("\n[yellow]Session ended.[/yellow]")
             break
 
-        if not task:
+        if not message:
             continue
 
-        if task.lower() in {"exit", "quit"}:
+        if message.lower() in {"exit", "quit"}:
             console.print("[yellow]Goodbye.[/yellow]")
             break
 
         try:
-            agent = CodeAgent()
-            loop = CodeLoop(agent=agent, max_attempts=max_attempts)
+            if agent is None:
+                agent = CodeAgent()
+
+            # First decide whether this is conversation or a coding task.
+            with console.status(
+                "[cyan]Thinking...",
+                spinner="dots",
+            ):
+                decision = agent.route_message(message)
+
+            if decision["intent"] == "chat":
+                # Ordinary messages never invoke code generation or tests.
+                console.print(
+                    Panel(
+                        Markdown(decision["response"]),
+                        title="[bold cyan]CodePilot[/bold cyan]",
+                        border_style="cyan",
+                    )
+                )
+                continue
+
+            # Only coding tasks reach the implementation pipeline.
+            task = decision["response"]
+            loop = CodeLoop(
+                agent=agent,
+                max_attempts=max_attempts,
+            )
 
             with console.status(
-                "[cyan]Generating code and tests, then running tests...",
+                "[cyan]Generating code and tests, running tests, "
+                "and repairing failures...",
                 spinner="dots",
             ):
                 result = loop.run(task=task)
@@ -145,10 +175,10 @@ def chat(
                 )
 
             console.print(f"Implementation saved to: [cyan]{code_path}[/cyan]")
-            console.print(f"Combined test script saved to: [cyan]{test_path}[/cyan]")
+            console.print(f"Test script saved to: [cyan]{test_path}[/cyan]")
 
-        except Exception as exc:
-            console.print(f"[bold red]Task failed:[/bold red] {exc}")
+        except Exception as exc:  # noqa: BLE001
+            console.print(f"[bold red]Error:[/bold red] {exc}")
 
 
 if __name__ == "__main__":
