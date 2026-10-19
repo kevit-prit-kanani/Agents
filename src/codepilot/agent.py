@@ -125,7 +125,7 @@ class CodeAgent:
                 For code, make the response field a concise, faithful description of the
                 requested coding task. Do not generate the implementation here.
                 Do not treat every mention of programming as a coding task.
-            """
+        """
 
         result = self.client.responses.create(
             model=self.model,

@@ -1,7 +1,7 @@
-from contextlib import contextmanager
 import re
+from collections.abc import Generator
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
 
 import typer
 from rich.console import Console
@@ -35,7 +35,7 @@ def save_code(task: str, code: str) -> Path:
 
 
 @contextmanager
-def show_progress_step(label: str) -> Iterator[None]:
+def show_progress_step(label: str) -> Generator[None]:
     """Show one active step, then keep its completion visible."""
     with console.status(f"[cyan]{label}...", spinner="dots"):
         yield
