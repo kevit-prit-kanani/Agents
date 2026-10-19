@@ -18,6 +18,9 @@ test scripts.
 During interactive work, CodePilot shows each active stage and marks completed
 stages before moving on to the next one.
 
+The chat prompt suggests matching slash commands as you type. Use `/help` to
+list commands, and `/exit` or `/quit` to end the chat.
+
 ## Run
 
 Set `OPENAI_API_KEY` in `.env`, then start the interactive session:

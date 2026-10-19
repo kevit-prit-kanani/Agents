@@ -1,7 +1,7 @@
 
+from collections.abc import Callable
 from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass
-from typing import Callable
 
 from codepilot.agent import CodeAgent
 from codepilot.runner import TestResult, TestRunner

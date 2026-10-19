@@ -4,6 +4,9 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import typer
+from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import CompleteEvent, Completer, Completion
+from prompt_toolkit.document import Document
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -19,6 +22,33 @@ app = typer.Typer(
 )
 
 console = Console()
+
+SLASH_COMMANDS = {
+    "/help": "Show available commands",
+    "/exit": "Exit CodePilot",
+    "/quit": "Exit CodePilot",
+}
+
+
+class SlashCommandCompleter(Completer):
+    """Suggest available slash commands while the user types."""
+
+    def get_completions(
+        self,
+        document: Document,
+        complete_event: CompleteEvent,
+    ) -> Generator[Completion]:
+        prefix = document.text_before_cursor
+        if not prefix.startswith("/") or any(char.isspace() for char in prefix):
+            return
+
+        for command, description in SLASH_COMMANDS.items():
+            if command.startswith(prefix.lower()):
+                yield Completion(
+                    command,
+                    start_position=-len(prefix),
+                    display_meta=description,
+                )
 
 
 def save_code(task: str, code: str) -> Path:
@@ -113,6 +143,32 @@ def handle_message(
     run_coding_task(agent, decision["response"], max_attempts)
 
 
+def handle_slash_command(message: str) -> bool | None:
+    """Run a slash command; return whether the chat should exit."""
+    command = message.strip().lower()
+
+    if command in {"/exit", "/quit"}:
+        return True
+    if command == "/help":
+        console.print(
+            Panel(
+                "\n".join(
+                    f"[cyan]{name}[/cyan] — {description}"
+                    for name, description in SLASH_COMMANDS.items()
+                ),
+                title="Available commands",
+            )
+        )
+        return False
+    if command.startswith("/"):
+        console.print(
+            f"[yellow]Unknown command:[/yellow] {command}. "
+            "Type /help to see available commands."
+        )
+        return False
+    return None
+
+
 @app.command()
 def generate(
     task: str = typer.Argument(..., help="Describe the Python program."),
@@ -149,26 +205,38 @@ def chat(
         Panel(
             "Ask questions or give me a coding task.\n"
             "Coding tasks are generated, tested, and repaired automatically.\n"
-            "Type 'exit' or 'quit' to stop.",
+            "Type /help for commands. Use /exit or /quit to stop.",
             title="[bold cyan]CodePilot[/bold cyan]",
         )
     )
 
     agent = None
+    prompt_session = PromptSession(
+        completer=SlashCommandCompleter(),
+        complete_while_typing=True,
+    )
 
     while True:
         try:
-            message = console.input("\n[bold cyan]you > [/bold cyan]").strip()
-        except EOFError, KeyboardInterrupt:
-            console.print("\n[yellow]Session ended.[/yellow]")
+            message = prompt_session.prompt("you > ").strip()
+        except KeyboardInterrupt:
+            console.print(
+                "\n[yellow]Input cancelled. Use /exit or /quit to end the chat.[/yellow]"
+            )
+            continue
+        except EOFError:
+            console.print("\n[yellow]Input stream closed.[/yellow]")
             break
 
         if not message:
             continue
 
-        if message.lower() in {"exit", "quit"}:
+        should_exit = handle_slash_command(message)
+        if should_exit is True:
             console.print("[yellow]Goodbye.[/yellow]")
             break
+        if should_exit is False:
+            continue
 
         try:
             if agent is None:
