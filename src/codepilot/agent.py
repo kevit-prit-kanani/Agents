@@ -52,16 +52,17 @@ class CodeAgent:
     ) -> str:
         """Generate or repair a Python implementation."""
         instructions = """
-You are a Python code generation agent.
+            You are a Python code generation agent.
 
-Requirements:
-- Return Python implementation code only.
-- Do not include Markdown fences or explanations.
-- Prefer simple, readable, maintainable code.
-- Do not include tests in the implementation.
-- Correct the implementation using any provided test feedback.
-- Do not claim that the code passed tests unless it was tested.
-"""
+            Requirements:
+            - Return Python implementation code only.
+            - Do not include Markdown fences or explanations.
+            - Prefer simple, readable, maintainable code.
+            - Do not include tests in the implementation.
+            - Correct the implementation using any provided test feedback.
+            - Do not claim that the code passed tests unless it was tested.
+        """
+        
         prompt = f"Programming task:\n{task}"
 
         if feedback:

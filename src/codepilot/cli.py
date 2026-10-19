@@ -1,5 +1,7 @@
+from contextlib import contextmanager
 import re
 from pathlib import Path
+from typing import Iterator
 
 import typer
 from rich.console import Console
@@ -8,7 +10,7 @@ from rich.panel import Panel
 from rich.syntax import Syntax
 
 from codepilot.agent import CodeAgent
-from codepilot.loop import CodeLoop
+from codepilot.workflow import CodeWorkflow
 
 app = typer.Typer(
     name="CodePilot",
@@ -19,8 +21,8 @@ app = typer.Typer(
 console = Console()
 
 
-def save_result(task: str, code: str, test_code: str) -> tuple[Path, Path]:
-    """Save the implementation and a runnable combined test script."""
+def save_code(task: str, code: str) -> Path:
+    """Save the generated implementation."""
     output_dir = Path("generated")
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -28,20 +30,87 @@ def save_result(task: str, code: str, test_code: str) -> tuple[Path, Path]:
     slug = slug[:40] or "solution"
 
     code_path = output_dir / f"{slug}.py"
-    test_path = output_dir / f"{slug}_test_run.py"
-
     code_path.write_text(code.rstrip() + "\n", encoding="utf-8")
+    return code_path
 
-    combined = (
-        code.rstrip()
-        + "\n\nimport unittest\n\n"
-        + test_code.strip()
-        + "\n\nif __name__ == '__main__':\n"
-        + "    unittest.main(verbosity=2)\n"
+
+@contextmanager
+def show_progress_step(label: str) -> Iterator[None]:
+    """Show one active step, then keep its completion visible."""
+    with console.status(f"[cyan]{label}...", spinner="dots"):
+        yield
+    console.print(f"[bold green]✓ {label}[/bold green]")
+
+
+def run_coding_task(
+    agent: CodeAgent,
+    task: str,
+    max_attempts: int,
+) -> None:
+    """Generate, test, and display one coding task."""
+    workflow = CodeWorkflow(
+        agent=agent,
+        max_attempts=max_attempts,
+        show_progress=show_progress_step,
     )
-    test_path.write_text(combined, encoding="utf-8")
+    result = workflow.run(task=task)
 
-    return code_path, test_path
+    console.print(
+        Panel(
+            Syntax(
+                result.code,
+                "python",
+                theme="monokai",
+                line_numbers=True,
+            ),
+            title="Final Python Implementation",
+            border_style="green" if result.passed else "red",
+        )
+    )
+
+    code_path = save_code(task, result.code)
+
+    if result.passed:
+        console.print(
+            f"[bold green]Tests passed[/bold green] "
+            f"on attempt {result.attempts}/{max_attempts}."
+        )
+    else:
+        console.print(
+            f"[bold red]Tests did not pass[/bold red] "
+            f"after {result.attempts} attempt(s)."
+        )
+        console.print(
+            Panel(
+                result.test_result.feedback,
+                title="Final Test Feedback",
+                border_style="red",
+            )
+        )
+
+    console.print(f"Implementation saved to: [cyan]{code_path}[/cyan]")
+
+
+def handle_message(
+    agent: CodeAgent,
+    message: str,
+    max_attempts: int,
+) -> None:
+    """Route a message to a direct answer or the coding workflow."""
+    with show_progress_step("Understanding your request"):
+        decision = agent.route_message(message)
+
+    if decision["intent"] == "chat":
+        console.print(
+            Panel(
+                Markdown(decision["response"]),
+                title="[bold cyan]CodePilot[/bold cyan]",
+                border_style="cyan",
+            )
+        )
+        return
+
+    run_coding_task(agent, decision["response"], max_attempts)
 
 
 @app.command()
@@ -105,77 +174,7 @@ def chat(
             if agent is None:
                 agent = CodeAgent()
 
-            # First decide whether this is conversation or a coding task.
-            with console.status(
-                "[cyan]Thinking...",
-                spinner="dots",
-            ):
-                decision = agent.route_message(message)
-
-            if decision["intent"] == "chat":
-                # Ordinary messages never invoke code generation or tests.
-                console.print(
-                    Panel(
-                        Markdown(decision["response"]),
-                        title="[bold cyan]CodePilot[/bold cyan]",
-                        border_style="cyan",
-                    )
-                )
-                continue
-
-            # Only coding tasks reach the implementation pipeline.
-            task = decision["response"]
-            loop = CodeLoop(
-                agent=agent,
-                max_attempts=max_attempts,
-            )
-
-            with console.status(
-                "[cyan]Generating code and tests, running tests, "
-                "and repairing failures...",
-                spinner="dots",
-            ):
-                result = loop.run(task=task)
-
-            console.print(
-                Panel(
-                    Syntax(
-                        result.code,
-                        "python",
-                        theme="monokai",
-                        line_numbers=True,
-                    ),
-                    title="Final Python Implementation",
-                    border_style="green" if result.passed else "red",
-                )
-            )
-
-            code_path, test_path = save_result(
-                task,
-                result.code,
-                result.test_code,
-            )
-
-            if result.passed:
-                console.print(
-                    f"[bold green]Tests passed[/bold green] "
-                    f"on attempt {result.attempts}/{max_attempts}."
-                )
-            else:
-                console.print(
-                    f"[bold red]Tests did not pass[/bold red] "
-                    f"after {result.attempts} attempt(s)."
-                )
-                console.print(
-                    Panel(
-                        result.test_result.feedback,
-                        title="Final Test Feedback",
-                        border_style="red",
-                    )
-                )
-
-            console.print(f"Implementation saved to: [cyan]{code_path}[/cyan]")
-            console.print(f"Test script saved to: [cyan]{test_path}[/cyan]")
+            handle_message(agent, message, max_attempts)
 
         except Exception as exc:  # noqa: BLE001
             console.print(f"[bold red]Error:[/bold red] {exc}")

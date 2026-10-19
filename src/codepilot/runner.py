@@ -15,7 +15,7 @@ class TestResult:
     return_code: int | None
     stdout: str
     stderr: str
-    time_out: bool = False
+    timed_out: bool = False
 
     @property
     def feedback(self) -> str:
@@ -23,7 +23,7 @@ class TestResult:
         if self.passed:
             return "All tests passed!"
 
-        if self.time_out:
+        if self.timed_out:
             return "Execution timed out"
 
         return (
@@ -34,7 +34,7 @@ class TestResult:
 
 
 class TestRunner:
-    """Execute candidate code with a predefined test suite."""
+    """Execute candidate code and its generated tests in a child process."""
 
     __test__ = False
 
@@ -46,9 +46,9 @@ class TestRunner:
 
     def run(self, code: str, test_code: str) -> TestResult:
         """
-        Run candidate code and trusted tests in a child Python process.
+        Run candidate code and its generated tests in a temporary child process.
 
-        test_code must be supplied by the application, not by the LLM.
+        The temporary test script is removed automatically after execution.
         """
 
         with tempfile.TemporaryDirectory(prefix="codepilot-") as tmp:
@@ -93,5 +93,5 @@ class TestRunner:
                     return_code=None,
                     stdout=stdout,
                     stderr=stderr,
-                    time_out=True,
+                    timed_out=True,
                 )

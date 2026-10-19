@@ -73,4 +73,4 @@ while True:
     )
 
     assert not result.passed
-    assert result.time_out
+    assert result.timed_out
