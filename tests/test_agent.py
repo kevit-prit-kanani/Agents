@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 import codepilot.agent as agent_module
+import codepilot.settings as settings_module
 from codepilot.agent import CodeAgent
 
 
@@ -42,7 +43,13 @@ def test_generate_passes_feedback(monkeypatch):
     assert "AssertionError" in request["input"]
 
 
-def test_generate_rejects_missing_api_key(monkeypatch):
+def test_generate_rejects_missing_api_key(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        settings_module,
+        "user_config_file",
+        lambda: tmp_path / "missing" / ".env",
+    )
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
     with pytest.raises(ValueError, match="OPENAI_API_KEY is missing"):

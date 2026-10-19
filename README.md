@@ -23,14 +23,23 @@ list commands, and `/exit` or `/quit` to end the chat.
 
 ## Run
 
-Set `OPENAI_API_KEY` in `.env`, then start the interactive session:
+Install the package, save your OpenAI API key, and start the interactive
+session:
 
 ```console
-uv run codepilot chat
+pipx install codepilot
+codepilot setup
+codepilot chat
 ```
+
+If you prefer not to use `pipx`, you can install with `python -m pip install
+codepilot` in an environment whose scripts directory is on your `PATH`.
 
 Generate code directly without the interactive session:
 
 ```console
 uv run codepilot generate "Write a function that checks whether text is a palindrome"
 ```
+
+See [SETUP.md](SETUP.md) for user installation and package publishing
+instructions.

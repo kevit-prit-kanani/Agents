@@ -1,7 +1,7 @@
 [project]
 name = "codepilot"
 version = "0.1.0"
-description = "Add your description here"
+description = "A command-line AI assistant for generating and testing Python code."
 readme = "README.md"
 authors = [
     { name = "kevit-prit-kanani", email = "prit.kanani@kevit.io" }
@@ -31,3 +31,6 @@ dev = [
 
 [project.scripts]
 codepilot = "codepilot.cli:app"
+
+[project.urls]
+Repository = "https://github.com/kevit-prit-kanani/Agents"

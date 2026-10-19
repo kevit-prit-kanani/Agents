@@ -2,10 +2,9 @@ import json
 import os
 import re
 
-from dotenv import load_dotenv
 from openai import OpenAI
 
-load_dotenv()
+from codepilot.settings import load_configuration
 
 
 def clean_code(text: str) -> str:
@@ -25,10 +24,12 @@ class CodeAgent:
     """Generate Python implementations and their tests."""
 
     def __init__(self) -> None:
+        load_configuration()
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError(
-                "OPENAI_API_KEY is missing. Configure it in your .env file."
+                "OPENAI_API_KEY is missing. Run `codepilot setup` to save it, "
+                "or set the OPENAI_API_KEY environment variable."
             )
 
         self.model = os.getenv("OPENAI_MODEL", "gpt-5.5")

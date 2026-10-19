@@ -13,6 +13,7 @@ from rich.panel import Panel
 from rich.syntax import Syntax
 
 from codepilot.agent import CodeAgent
+from codepilot.settings import save_api_key
 from codepilot.workflow import CodeWorkflow
 
 app = typer.Typer(
@@ -167,6 +168,26 @@ def handle_slash_command(message: str) -> bool | None:
         )
         return False
     return None
+
+
+@app.command()
+def setup() -> None:
+    """Save or replace the OpenAI API key for this user."""
+    api_key = typer.prompt(
+        "OpenAI API key",
+        hide_input=True,
+        confirmation_prompt=True,
+    )
+    try:
+        config_file = save_api_key(api_key)
+    except (OSError, ValueError) as exc:
+        console.print(f"[bold red]Could not save API key:[/bold red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print(
+        "[bold green]API key saved.[/bold green] "
+        f"Configuration file: [cyan]{config_file}[/cyan]"
+    )
 
 
 @app.command()

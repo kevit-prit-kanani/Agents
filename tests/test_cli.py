@@ -2,9 +2,11 @@ from pathlib import Path
 
 from prompt_toolkit.completion import CompleteEvent
 from prompt_toolkit.document import Document
+from typer.testing import CliRunner
 
 from codepilot.cli import (
     SlashCommandCompleter,
+    app,
     handle_slash_command,
     save_code,
 )
@@ -55,3 +57,23 @@ def test_only_slash_exit_commands_exit_chat():
     assert handle_slash_command("/QUIT") is True
     assert handle_slash_command("exit") is None
     assert handle_slash_command("quit") is None
+
+
+def test_setup_command_saves_key_without_printing_it(monkeypatch, tmp_path):
+    config_file = tmp_path / "codepilot" / ".env"
+    monkeypatch.setattr(
+        "codepilot.cli.save_api_key",
+        lambda api_key: _save_key(config_file, api_key),
+    )
+    result = CliRunner().invoke(app, ["setup"], input="secret-key\nsecret-key\n")
+
+    assert result.exit_code == 0
+    assert "API key saved" in result.output
+    assert "secret-key" not in result.output
+    assert "secret-key" in config_file.read_text(encoding="utf-8")
+
+
+def _save_key(config_file: Path, api_key: str) -> Path:
+    config_file.parent.mkdir(parents=True, exist_ok=True)
+    config_file.write_text(f"OPENAI_API_KEY={api_key}\n", encoding="utf-8")
+    return config_file
